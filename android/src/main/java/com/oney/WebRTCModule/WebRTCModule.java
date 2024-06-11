@@ -99,6 +99,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
             decoderFactory = options.videoDecoderFactory;
             injectableLogger = options.injectableLogger;
             loggingSeverity = options.loggingSeverity;
+            Log.d(TAG, "_________module started with options");
         }
 
         PeerConnectionFactory.initialize(
@@ -919,9 +920,20 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
 
                 @Override
                 public void onCreateSuccess(SessionDescription sdp) {
+                    System.out.println("___SESSION DESCRIPTION_____ " + sdp.description);
+                    System.out.println("___TYPE_____" + sdp.type.canonicalForm());
                     WritableMap params = Arguments.createMap();
                     WritableMap sdpInfo = Arguments.createMap();
-                    sdpInfo.putString("sdp", sdp.description);
+                    String h264_b_sdp = "a=rtpmap:102 H264/90000\na=fmtp:102 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f\na=rtcp-fb:102 transport-cc\na=rtcp-fb:102 ccm fir\na=rtcp-fb:102 nack\na=rtcp-fb:102 nack pli\na=rtpmap:103 rtx/90000\na=fmtp:103 apt=102\n";
+                    String h264_M_sdp = "a=rtpmap:127 H264/90000\na=fmtp:127 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d001f\na=rtcp-fb:127 transport-cc\na=rtcp-fb:127 ccm fir\na=rtcp-fb:127 nack\na=rtcp-fb:127 nack pli\na=rtpmap:125 rtx/90000\na=fmtp:125 apt=127\n";
+                    String m_tag = "video 9 UDP/TLS/RTP/SAVPF";
+                    String additional_payload_types = " 102 125";
+                    int insert_pos = sdp.description.indexOf(m_tag);
+                    insert_pos += m_tag.length();
+                    String description = new StringBuilder(sdp.description).insert(insert_pos, additional_payload_types).toString();
+                    String sdp_description_final = description + h264_M_sdp + h264_b_sdp;
+                    System.out.println("Final Description:\n" + sdp_description_final);
+                    sdpInfo.putString("sdp", sdp_description_final);
                     sdpInfo.putString("type", sdp.type.canonicalForm());
                     params.putArray("transceiversInfo", getTransceiversInfo(id));
                     params.putMap("sdpInfo", sdpInfo);
@@ -960,6 +972,9 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
                 public void onCreateSuccess(SessionDescription sdp) {
                     WritableMap params = Arguments.createMap();
                     WritableMap sdpInfo = Arguments.createMap();
+                    System.out.println("___ANSWER___SESSION DESCRIPTION_____ " + sdp.description);
+                    String h264_b_sdp = "a=rtpmap:102 H264/90000\na=fmtp:102 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f\na=rtcp-fb:102 transport-cc\na=rtcp-fb:102 ccm fir\na=rtcp-fb:102 nack\na=rtcp-fb:102 nack pli";
+                    String h264_M_sdp = "a=rtpmap:119 H264/90000\na=fmtp:119 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d001f\na=rtcp-fb:119 transport-cc\na=rtcp-fb:119 ccm fir\na=rtcp-fb:119 nack\na=rtcp-fb:119 nack pli";
                     sdpInfo.putString("sdp", sdp.description);
                     sdpInfo.putString("type", sdp.type.canonicalForm());
                     params.putArray("transceiversInfo", getTransceiversInfo(id));
@@ -1051,6 +1066,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
                 SessionDescription.Type.fromCanonicalForm(sdpMap.getString("type")),
                 sdpMap.getString("sdp")
             );
+            System.out.println("SDP REMOTE DESCRIPTION" + sdp.description);
 
             List<String> receiversIds = new ArrayList<>();
             for(RtpTransceiver transceiver: peerConnection.getTransceivers()) {
@@ -1109,12 +1125,15 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
         try {
             return (WritableMap) ThreadUtils.submitToExecutor((Callable<Object>) () -> {
                 VideoCodecInfo[] videoCodecInfos = mVideoDecoderFactory.getSupportedCodecs();
+                System.out.println("VIDEOCONDE INFO" + videoCodecInfos.toString());
                 WritableMap params = Arguments.createMap();
                 WritableArray codecs = Arguments.createArray();
                 for(VideoCodecInfo codecInfo: videoCodecInfos) {
                     codecs.pushMap(SerializeUtils.serializeVideoCodecInfo(codecInfo));
                 }
                 params.putArray("codecs", codecs);
+                Log.d(TAG, "_________PRINTINITG CODECS___________");
+                System.out.println("codecs" + params.toString());
                 return params;
             }).get();
         } catch (ExecutionException | InterruptedException e) {
